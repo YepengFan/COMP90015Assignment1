@@ -13,7 +13,7 @@ hs_err_pid*
 
 # ignore IDEA
 .idea/
-Assignment1.iml
+proj1.iml
 
 # ignore Subject Spec
 Specification/

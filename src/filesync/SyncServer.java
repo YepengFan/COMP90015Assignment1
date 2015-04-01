@@ -85,31 +85,25 @@ public class SyncServer {
             return json;
         }
 
-        public synchronized void run() {
+        public void run() {
             try { // an echo server
-                System.out.println("Server reading data");
-                String data = in.readUTF();
-                System.out.println(data);
-//                Map json = parseJSON(data);
-//
-//                if (json.get("Type").equals("StartUpdate")) {
-//                    String path = toDirectory + "/" + String.valueOf(json.get
-//                            ("FileName"));
-//                    SynchronisedFile toFile = new SynchronisedFile(path);
-//                    FileSync tf = new FileSync(toFile);
-//                    tf.pushInst(data);
-////                    while (json.get("Type").equals("EndUpdate") == false) {
-////                        data = in.readUTF();
-////                        System.out.println("new" + data);
-////                        json = parseJSON(data);
-////                        tf.pushInst(data);
-////                    }
-////                    data = in.readUTF();
-////                    tf.pushInst(data);
-//                }
-
-                System.out.println("Server writing data");
-                out.writeUTF(data);
+                while (true) {
+                    synchronized (this) {
+                        System.out.println("Server reading data");
+                        String data = in.readUTF();
+//                        Map json = parseJSON(data);
+//                        if (json.get("Type").equals("StartUpdate")) {
+//                            String path = toDirectory + "/" + String.valueOf(json.get
+//                                    ("FileName"));
+//                            SynchronisedFile toFile = new SynchronisedFile(path);
+//                            FileSync tf = new FileSync(toFile);
+//                            tf.pushInst(data);
+//                        }
+                        System.out.println(data);
+                        System.out.println("Server writing data");
+                        out.writeUTF(data);
+                    }
+                }
             } catch (EOFException e) {
                 System.out.println("EOF: " + e.getMessage());
             } catch (IOException e) {
@@ -125,11 +119,11 @@ public class SyncServer {
 
         protected class FileSync implements Runnable {
             SynchronisedFile toFile;
-            private ArrayBlockingQueue<Instruction> instQueue = new
-                    ArrayBlockingQueue<Instruction>(1024 * 1024);
+            private ArrayBlockingQueue<Instruction> instQueue;
 
             FileSync(SynchronisedFile tf) {
                 toFile = tf;
+                instQueue = new ArrayBlockingQueue<>(1024 * 1024);
             }
 
             public void pushInst(String msg) {

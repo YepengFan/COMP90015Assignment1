@@ -111,16 +111,16 @@ public class SyncClient {
                 System.out.format("%s: %s\n", event.kind().name(), child);
 
                 // start a thread to service the Instruction queue.
-                try{
+                try {
                     SynchronisedFile fromFile = new SynchronisedFile
                             (String.valueOf(child));
                     fromFile.CheckFileState();
                     Thread stt = new Thread(new FileSync(fromFile));
                     stt.start();
-                } catch (IOException e){
+                } catch (IOException e) {
                     e.printStackTrace();
                     System.exit(-1);
-                } catch (InterruptedException e){
+                } catch (InterruptedException e) {
                     e.printStackTrace();
                     System.exit(-1);
                 }
@@ -159,7 +159,6 @@ public class SyncClient {
         System.out.println("Connection Established");
         in = new DataInputStream(socket.getInputStream());
         out = new DataOutputStream(socket.getOutputStream());
-
 
 //         try{
 //             s = new Socket(hostname, serverPort);
@@ -204,11 +203,11 @@ public class SyncClient {
                 String msg = inst.ToJSON();
                 System.err.println("Sending: " + msg);
                 // Client sends the message to the Server
-                try{
+                try {
                     out.writeUTF(msg);
                     String data = in.readUTF();
                     System.out.println("Received: " + data);
-                } catch (IOException e){
+                } catch (IOException e) {
                     System.out.println(e.getMessage());
                 }
             }

@@ -1,6 +1,10 @@
 COMP90015 Distributed System - Project 1:
 
 Programming Part:
+  Implementations:
+    ☐ Event-based directory changes detection
+    ☐ Single file sync
+    ☐ Socket - TCP protocol
   Develop a basic c/s system:
     ☐ TCP Synchronous Request-Reply Protocol
        ☐ Instructions

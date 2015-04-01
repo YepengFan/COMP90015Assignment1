@@ -3,9 +3,14 @@ COMP90015 Distributed System - Project 1:
 Programming Part:
   Develop a basic c/s system:
     ☐ TCP Synchronous Request-Reply Protocol
+       ☐ Instructions
+       ☐ SyncTest process
+    ☐ Folder Synchronsation
+      ☐ Single file sync
+      ☐ New file synchronisation
+         ☐ check file name / state
+      ☐ File deletion synchronisation and will terminate corresponding thread
     ☐ Handle "BlockUnavailableException" at the server
-    ☐ New file synchronisation 
-    ☐ File deletion synchronisation and will terminate corresponding thread
     Extra:
       ☐ Nested folders @low
       ☐ File modification on the server @low

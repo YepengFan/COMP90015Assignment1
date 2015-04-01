@@ -69,8 +69,6 @@ public class SyncTest {
 				System.exit(-1);
 			}
 		}
-		
-		
 	}
 
 }

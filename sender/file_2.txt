@@ -1,1 +1,1 @@
-This is client file.
+This is the client file.

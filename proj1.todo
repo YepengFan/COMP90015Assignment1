@@ -4,7 +4,7 @@ Programming Part:
   Implementations:
     ☐ Event-based directory changes detection
     ☐ Single file sync
-    ☐ Socket - TCP protocol
+    ✔ Socket - TCP protocol @done (15-04-02 09:18)
   Develop a basic c/s system:
     ☐ TCP Synchronous Request-Reply Protocol
        ☐ Instructions
@@ -15,12 +15,13 @@ Programming Part:
          ☐ check file name / state
       ☐ File deletion synchronisation and will terminate corresponding thread
     ☐ Handle "BlockUnavailableException" at the server
+    ☐ Daemon Thread except main thread
     Extra:
       ☐ Nested folders @low
       ☐ File modification on the server @low
    Technical Aspects:
     ✔ Java 1.7+ @done (15-03-31 00:08)
-    ☐ JSON message
+    ✔ JSON message @done (15-04-02 09:19)
     ☐ Deamon Thread
       ☐ http://www.cnblogs.com/diyingyun/archive/2011/12/25/2300998.html
       ☐ http://blog.csdn.net/liangliyin/article/details/6076552

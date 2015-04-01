@@ -1,0 +1,37 @@
+COMP90015 Distributed System - Project 1:
+
+Programming Part:
+  Develop a basic c/s system:
+    ☐ TCP Synchronous Request-Reply Protocol
+    ☐ Handle "BlockUnavailableException" at the server
+    ☐ New file synchronisation 
+    ☐ File deletion synchronisation and will terminate corresponding thread
+    Extra:
+      ☐ Nested folders @low
+      ☐ File modification on the server @low
+   Technical Aspects:
+    ✔ Java 1.7+ @done (15-03-31 00:08)
+    ☐ JSON message
+    ☐ Deamon Thread
+      ☐ http://www.cnblogs.com/diyingyun/archive/2011/12/25/2300998.html
+      ☐ http://blog.csdn.net/liangliyin/article/details/6076552
+    ☐ 2 jar file. One for server, one for client
+    ☐ Jar command line arguments
+      ☐ default server port: 4444
+      ☐ command line parsing: args4j library
+      ☐ [C-c] should terminate either client or server
+
+   Report Part:
+    ☐ Format
+      ☐ 10pt font
+      ✔ double column @done (15-03-31 00:14)
+      ☐ 1 inch margin all around
+      ✔ name, login name, and student number at the top @done (15-03-31 00:20)
+    ☐ Content
+      ☐ Challenges if have multiple clients (250 words + diagrams)
+      ☐ How to scale when the number of files increases using one thread for each file. (250 words + diagrams)
+        ☐ Research and discuss at least 2 better design approaches
+      ☐ Research and choose two commercial or well known distributed systems
+        ☐ their architectural models 
+        ☐ their fundamental models
+        ☐ compare how well they meet the challenges of distributed systems

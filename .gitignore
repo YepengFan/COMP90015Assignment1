@@ -18,3 +18,12 @@ proj1.iml
 # ignore Subject Spec
 Specification/
 
+# Some code examples
+SampleMain.java
+TCPClient_1.java
+TCPEchoServer.java
+TestThreadAndCmdOptions.java
+ThreadSynchTest.java
+WatchDir.java
+tcp_example/
+

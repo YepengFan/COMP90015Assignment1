@@ -4,14 +4,16 @@ package filesync;
  * Created by yepengfan on 28/03/15.
  */
 
-import static java.nio.file.StandardWatchEventKinds.*;
-import static java.nio.file.LinkOption.*;
-
 import java.net.*;
 import java.io.*;
 import java.nio.file.*;
 import java.nio.file.attribute.*;
 import java.util.*;
+
+import org.json.simple.JSONObject;
+
+import static java.nio.file.StandardWatchEventKinds.*;
+import static java.nio.file.LinkOption.*;
 
 /**
  * Implement TCP Protocol - Client Side
@@ -115,8 +117,10 @@ public class SyncClient {
                     SynchronisedFile fromFile = new SynchronisedFile
                             (String.valueOf(child));
                     fromFile.CheckFileState();
-                    Thread stt = new Thread(new FileSync(fromFile));
-                    stt.start();
+//                    Thread stt = new Thread(new FileSync(fromFile));
+//                    stt.start();
+                    FileSync fileSync = new FileSync(fromFile);
+                    fileSync.start();
                 } catch (IOException e) {
                     e.printStackTrace();
                     System.exit(-1);
@@ -151,19 +155,36 @@ public class SyncClient {
         }
     }
 
+    private void indexingDirectory(String directory) {
+        JSONObject index = new JSONObject();
+        String[] dir = new File(directory).list();
+        LinkedList<String> list = new LinkedList<>(Arrays.asList(dir));
+        index.put("Type", "Index");
+        index.put("Index", list);
+
+        try {
+            out.writeUTF(index.toJSONString());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
     public static void main(String[] args) throws IOException {
         String hostname = args[1];
+        String directory = args[0];
+
         socket = new Socket(hostname, serverPort);
         System.out.println("Connection Established");
         in = new DataInputStream(socket.getInputStream());
         out = new DataOutputStream(socket.getOutputStream());
         boolean recursive = false;
-        Path dir = Paths.get(args[0]);
-        new SyncClient(dir, recursive).processEvents();
-
+        Path dir = Paths.get(directory);
+        SyncClient client = new SyncClient(dir, recursive);
+        client.indexingDirectory(directory);
+        client.processEvents();
     }
 
-    protected class FileSync implements Runnable {
+    protected class FileSync extends Thread {
         SynchronisedFile fromFile;
 
         FileSync(SynchronisedFile ff) {

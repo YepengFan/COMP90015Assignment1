@@ -18,6 +18,10 @@ proj1.iml
 # ignore Subject Spec
 Specification/
 
+# test folders
+sender/
+receiver/
+
 # Some code examples
 SampleMain.java
 TCPClient_1.java

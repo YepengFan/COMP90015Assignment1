@@ -2,13 +2,23 @@ COMP90015 Distributed System - Project 1:
 
 Programming Part:
   Implementations:
-    ☐ Event-based directory changes detection
+    ✔ Event-based directory changes detection @done (15-04-03 10:24)
+    ☐ Indexing folder files
     ☐ Single file sync
+    ☐ Daemon Thread
+    ☐ Client-side terminate threads
+    ☐ Server-side terminate threads
     ✔ Socket - TCP protocol @done (15-04-02 09:18)
+    ☐ File creation
+    ☐ File deletion
+      ☐ Terminate corresponding thread
+    ☐ Initialise folder on server-side
+      ☐ create thread for each file waiting for instructions
+      ☐ destroy thread when file deleted
   Develop a basic c/s system:
     ☐ TCP Synchronous Request-Reply Protocol
        ☐ Instructions
-       ☐ SyncTest process
+       ✔ SyncTest process @done (15-04-03 10:24)
     ☐ Folder Synchronsation
       ☐ Single file sync
       ☐ New file synchronisation

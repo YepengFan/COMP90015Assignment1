@@ -164,6 +164,8 @@ public class SyncClient {
 
         try {
             out.writeUTF(index.toJSONString());
+            String data = in.readUTF();
+            System.out.println("Received: " + data);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -194,16 +196,35 @@ public class SyncClient {
         @Override
         public synchronized void run() {
             Instruction inst;
+            boolean next = true;
             while ((inst = fromFile.NextInstruction()) != null) {
-                String msg = inst.ToJSON();
-                System.err.println("Sending: " + msg);
-                // Client sends the message to the Server
-                try {
-                    out.writeUTF(msg);
-                    String data = in.readUTF();
-                    System.out.println("Received: " + data);
-                } catch (IOException e) {
-                    System.out.println(e.getMessage());
+                if (next == true){
+                    next = false;
+                    String msg = inst.ToJSON();
+                    System.err.println("Sending: " + msg);
+                    // Client sends the message to the Server
+                    try {
+                        out.writeUTF(msg);
+                        String data = in.readUTF();
+                        System.out.println("Received: " + data);
+                        if(!data.equals("")){
+                            next = true;
+                        }
+                        if(data.equals("BlockUnavailableException")){
+                            Instruction upgraded = new NewBlockInstruction(
+                                    (CopyBlockInstruction)inst);
+                            String msg2 = upgraded.ToJSON();
+                            System.err.println("Sending: " + msg2);
+                            out.writeUTF(msg2);
+                            String data2 = in.readUTF();
+                            System.out.println("Received: " + data2);
+                            if(!data.equals("")) {
+                                next = true;
+                            }
+                        }
+                    } catch (IOException e) {
+                        System.out.println(e.getMessage());
+                    }
                 }
             }
         }

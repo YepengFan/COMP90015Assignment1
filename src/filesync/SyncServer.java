@@ -7,8 +7,6 @@ package filesync;
 import java.net.*;
 import java.io.*;
 import java.util.*;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
 
 import org.json.simple.JSONArray;
 import org.json.simple.parser.ContainerFactory;
@@ -22,16 +20,14 @@ public class SyncServer {
     private static ServerSocket listenSocket = null;
     private static int serverPort = 4444; // default port is 4444
     private static String toDirectory = null;
-    private static Map<String, FileSync> threadMapper = new HashMap<>();
-//    private static Map<String, Connection> connectionMapper = new HashMap<>();
+    private static Map<String, SynchronisedFile> instanceMapper = new
+            HashMap<>();
     // Single Client Version
-    private static Connection connection = null;
     private static int NUMBER = 0;
 
 
     private void processConnections(Socket clientSocket) {
-//        connectionMapper.put(("Connection " + NUMBER), new Connection(clientSocket));
-        connection = new Connection(clientSocket);
+        new Connection(clientSocket);
     }
 
     public static void main(String[] args) {
@@ -63,16 +59,13 @@ public class SyncServer {
             dir.mkdir();
         }
 
-        // register files to threadMap
+        // register files to instanceMapper
         File[] files = dir.listFiles();
         for (File file : files) {
             try {
                 SynchronisedFile tf = new SynchronisedFile(file.getAbsolutePath()
                         .toString());
-//                Thread fileSync = new Thread(new FileSync(tf));
-                FileSync fileSync = new FileSync(tf);
-                threadMapper.put(file.getName(), fileSync);
-                fileSync.start();
+                instanceMapper.put(file.getName(), tf);
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -125,6 +118,7 @@ public class SyncServer {
         }
 
         public void run() {
+            InstructionFactory instFact = new InstructionFactory();
             try { // an echo server
                 String fileName = null;
                 while (true) {
@@ -133,17 +127,14 @@ public class SyncServer {
                         String data = in.readUTF();
                         //parse input stream JSON
                         Map json = parseJSON(data);
+
                         if (json.get("Type").equals("Index")) {
-//                            System.out.println("Index Information: " + data);
                             // parse directory index
                             JSONArray file_list = (JSONArray) json.get("Index");
 //                            System.out.println(file_list);
                             for (int i = 0; i < file_list.size(); i++) {
 //                                System.out.println(file_list.get(i));
-                                // check file name with thread map
-                                if (threadMapper.get(file_list.get(i)) ==
-                                        null) {
-//                                    System.out.println("dont");
+                                if(instanceMapper.get(file_list.get(i)) == null){
 //                                    // destination directory
                                     File dir = new File(toDirectory);
                                     // create files
@@ -156,42 +147,32 @@ public class SyncServer {
                                     SynchronisedFile tf = new
                                             SynchronisedFile(file
                                             .getAbsolutePath().toString());
-                                    System.out.println(toDirectory);
-                                    System.out.println(file.getName());
-//                                    Thread fileSync = new Thread(new FileSync
-//                                            (tf));
-                                    FileSync fileSync = new FileSync(tf);
-
-                                    // add thread instance to map
-                                    threadMapper.put(file.getName(), fileSync);
-//                                    fileSync.start();
+                                    // add new instance to instance mapper
+                                    instanceMapper.put(file.getName(), tf);
                                 }
                             }
                         } else if (json.get("Type").equals("StartUpdate")) {
-//                            System.out.println("Start Update!!!");
                             fileName = json.get("FileName").toString();
-//                            System.out.println("!!!!!!!");
-                            System.out.println(threadMapper.get(fileName));
-//                            threadMap.get(json.get(fileName)).insertQue
-//                                    (json.toString());
-                            threadMapper.get(fileName).insertQue(json
+                            Instruction receivedInst = instFact.FromJSON(json
                                     .toString());
-                            System.out.println(json.toString());
-                            System.out.println(threadMapper.get(json.get
-                                    ("FileName")));
-                        } else if (json.get("Type").equals("EndUpdate")) {
-//                            System.out.println("End Update!!!");
-                            threadMapper.get(fileName).insertQue(json
-                                    .toString());
-                            fileName = null;
+                            try {
+                                instanceMapper.get(fileName).ProcessInstruction(receivedInst);
+                            } catch (BlockUnavailableException e) {
+//                                e.printStackTrace();
+                            }
                         } else {
-                            threadMapper.get(fileName).insertQue(json
+                            Instruction receivedInst = instFact.FromJSON(json
                                     .toString());
+                            try {
+                                instanceMapper.get(fileName)
+                                        .ProcessInstruction(receivedInst);
+                            } catch (BlockUnavailableException e){
+                                out.writeUTF("BlockUnavailableException");
+                            }
                         }
 
-                        System.out.println("Server writing data");
-                        System.out.println(data);
-                        out.writeUTF(data);
+                        System.err.println(json.toString());
+                        out.writeUTF(json.toString());
                     }
                 }
             } catch (EOFException e) {
@@ -207,50 +188,5 @@ public class SyncServer {
             }
         }
 
-    }
-
-    protected class FileSync extends Thread {
-        SynchronisedFile toFile;
-        //        private ArrayBlockingQueue<Instruction> instQueue  = new
-//                ArrayBlockingQueue<>(1024 * 1024);
-        private BlockingQueue<Instruction> instQueue = new
-                ArrayBlockingQueue<>(1024 * 1024);
-
-        FileSync(SynchronisedFile tf) {
-            toFile = tf;
-        }
-
-        public void insertQue(String msg) {
-            Instruction inst;
-            InstructionFactory instFact = new InstructionFactory();
-            inst = instFact.FromJSON(msg);
-            try {
-                instQueue.put(inst);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
-
-        @Override
-        public synchronized void run() {
-            while (true) {
-                try {
-                    toFile.ProcessInstruction(instQueue.take());
-                } catch (BlockUnavailableException e) {
-                    try {
-                        System.out.println("Block Unavailable Exception!!!");
-                        connection.out.writeUTF("BlockUnavailableException");
-                    } catch (IOException e1) {
-//                        e1.printStackTrace();
-                    }
-//                    e.printStackTrace();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-
-            }
-        }
     }
 }

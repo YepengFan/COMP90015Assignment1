@@ -25,9 +25,6 @@ public class SyncClient {
     private static DataInputStream in = null;
     private static DataOutputStream out = null;
 
-    private static Object lock = new Object();
-    private boolean processing = false;
-
     private static Map<String, FileSync> threadMapper = new HashMap<>();
 
     private final WatchService watcher;
@@ -175,7 +172,7 @@ public class SyncClient {
         for (File file : files) {
             try {
                 FileSync fileSync = new FileSync(new SynchronisedFile(file
-                        .getAbsolutePath()), lock);
+                        .getAbsolutePath()));
                 fileSync.start();
                 threadMapper.put(file.getName(), fileSync);
             } catch (IOException e) {
@@ -202,11 +199,9 @@ public class SyncClient {
 
     protected class FileSync extends Thread {
         SynchronisedFile fromFile;
-        Object lock;
 
-        FileSync(SynchronisedFile ff, Object lock) {
+        FileSync(SynchronisedFile ff) {
             fromFile = ff;
-            this.lock = lock;
         }
 
         @Override

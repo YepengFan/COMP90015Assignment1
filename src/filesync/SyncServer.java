@@ -121,9 +121,9 @@ public class SyncServer {
             InstructionFactory instFact = new InstructionFactory();
             try { // an echo server
                 String fileName = null;
+                System.out.println("Server reading data");
                 while (true) {
                     synchronized (this) {
-                        System.out.println("Server reading data");
                         String data = in.readUTF();
                         //parse input stream JSON
                         Map json = parseJSON(data);
@@ -131,11 +131,9 @@ public class SyncServer {
                         if (json.get("Type").equals("Index")) {
                             // parse directory index
                             JSONArray file_list = (JSONArray) json.get("Index");
-//                            System.out.println(file_list);
                             for (int i = 0; i < file_list.size(); i++) {
-//                                System.out.println(file_list.get(i));
-                                if(instanceMapper.get(file_list.get(i)) == null){
-//                                    // destination directory
+                                if (instanceMapper.get(file_list.get(i)) == null) {
+                                    // destination directory
                                     File dir = new File(toDirectory);
                                     // create files
                                     File file = new File(dir.getAbsoluteFile
@@ -151,6 +149,8 @@ public class SyncServer {
                                     instanceMapper.put(file.getName(), tf);
                                 }
                             }
+                            System.err.println(json.toString());
+                            out.writeUTF("Success");
                         } else if (json.get("Type").equals("StartUpdate")) {
                             fileName = json.get("FileName").toString();
                             Instruction receivedInst = instFact.FromJSON(json
@@ -160,19 +160,35 @@ public class SyncServer {
                             } catch (BlockUnavailableException e) {
 //                                e.printStackTrace();
                             }
+                            System.err.println(json.toString());
+                            out.writeUTF("Success");
                         } else {
                             Instruction receivedInst = instFact.FromJSON(json
                                     .toString());
                             try {
                                 instanceMapper.get(fileName)
                                         .ProcessInstruction(receivedInst);
-                            } catch (BlockUnavailableException e){
+                                System.err.println(json.toString());
+                                out.writeUTF("Success");
+                            } catch (BlockUnavailableException e) {
+                                System.err.println(json.toString());
                                 out.writeUTF("BlockUnavailableException");
+                                data = in.readUTF();
+                                json = parseJSON(data);
+                                receivedInst = instFact.FromJSON(json
+                                        .toString());
+                                try {
+                                    instanceMapper.get(fileName)
+                                            .ProcessInstruction(receivedInst);
+                                    System.err.println(json.toString());
+                                    out.writeUTF("Success");
+                                } catch (BlockUnavailableException e1) {
+                                    assert(false);
+                                }
                             }
                         }
 
-                        System.err.println(json.toString());
-                        out.writeUTF(json.toString());
+
                     }
                 }
             } catch (EOFException e) {

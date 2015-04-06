@@ -11,7 +11,6 @@ import java.nio.file.attribute.*;
 import java.util.*;
 
 import org.json.simple.JSONObject;
-
 import static java.nio.file.StandardWatchEventKinds.*;
 import static java.nio.file.LinkOption.*;
 
@@ -117,8 +116,6 @@ public class SyncClient {
                     SynchronisedFile fromFile = new SynchronisedFile
                             (String.valueOf(child));
                     fromFile.CheckFileState();
-//                    Thread stt = new Thread(new FileSync(fromFile));
-//                    stt.start();
                     FileSync fileSync = new FileSync(fromFile);
                     fileSync.start();
                 } catch (IOException e) {
@@ -164,6 +161,7 @@ public class SyncClient {
 
         try {
             out.writeUTF(index.toJSONString());
+            System.err.println("Sending: " + index.toJSONString());
             String data = in.readUTF();
             System.out.println("Received: " + data);
         } catch (IOException e) {
@@ -189,44 +187,52 @@ public class SyncClient {
     protected class FileSync extends Thread {
         SynchronisedFile fromFile;
 
+
         FileSync(SynchronisedFile ff) {
             fromFile = ff;
         }
 
-        @Override
-        public synchronized void run() {
-            Instruction inst;
-            boolean next = true;
-            while ((inst = fromFile.NextInstruction()) != null) {
-                if (next == true){
-                    next = false;
-                    String msg = inst.ToJSON();
-                    System.err.println("Sending: " + msg);
-                    // Client sends the message to the Server
-                    try {
-                        out.writeUTF(msg);
-                        String data = in.readUTF();
-                        System.out.println("Received: " + data);
-                        if(!data.equals("")){
-                            next = true;
+        private synchronized void process() {
+
+            Instruction inst = fromFile.NextInstruction();
+            while (inst != null) {
+                String msg = inst.ToJSON();
+                System.err.println("Sending: " + msg);
+                try {
+                    out.writeUTF(msg);
+
+                    String feedback = in.readUTF();
+                    System.out.println("Received: " + feedback);
+                    if (feedback.equals("Success")) {
+                        inst = fromFile.NextInstruction();
+                    } else if (feedback.equals("BlockUnavailableException")) {
+                        Instruction upgraded = new NewBlockInstruction(
+                                (CopyBlockInstruction) inst);
+                        String msg2 = upgraded.ToJSON();
+                        System.err.println("Sending: " + msg2);
+
+                        out.writeUTF(msg2);
+                        feedback = in.readUTF();
+                        System.out.println("Received: " + feedback);
+                        if (feedback.equals("Success")) {
+                            inst = fromFile.NextInstruction();
                         }
-                        if(data.equals("BlockUnavailableException")){
-                            Instruction upgraded = new NewBlockInstruction(
-                                    (CopyBlockInstruction)inst);
-                            String msg2 = upgraded.ToJSON();
-                            System.err.println("Sending: " + msg2);
-                            out.writeUTF(msg2);
-                            String data2 = in.readUTF();
-                            System.out.println("Received: " + data2);
-                            if(!data.equals("")) {
-                                next = true;
-                            }
-                        }
-                    } catch (IOException e) {
-                        System.out.println(e.getMessage());
                     }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
                 }
             }
+        }
+
+        @Override
+        public void run() {
+            process();
         }
     }
 }

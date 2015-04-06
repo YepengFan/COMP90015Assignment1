@@ -9,6 +9,8 @@ import java.io.*;
 import java.nio.file.*;
 import java.nio.file.attribute.*;
 import java.util.*;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 
 import org.json.simple.JSONObject;
 
@@ -26,11 +28,29 @@ public class SyncClient {
     private static DataOutputStream out = null;
 
     private static Map<String, FileSync> threadMapper = new HashMap<>();
+    private static BlockingQueue<Instruction> instQueue = new
+            ArrayBlockingQueue<>(1024);
 
     private final WatchService watcher;
     private final Map<WatchKey, Path> keys;
     private final boolean recursive;
     private boolean trace = false;
+
+    private static void putInst(Queue<Instruction>
+                                        fileInstQueue) throws
+            InterruptedException {
+        Iterator iterator = fileInstQueue.iterator();
+        Instruction instruction;
+        while (iterator.hasNext()) {
+            instruction = (Instruction) iterator.next();
+            instQueue.put(instruction);
+            System.out.println(instruction.ToJSON());
+        }
+    }
+
+    private static Instruction takeInst() throws InterruptedException {
+        return instQueue.take();
+    }
 
     @SuppressWarnings("unchecked")
     static <T> WatchEvent<T> cast(WatchEvent<?> event) {
@@ -193,12 +213,55 @@ public class SyncClient {
         boolean recursive = false;
         Path dir = Paths.get(directory);
         SyncClient client = new SyncClient(dir, recursive);
+        Messager msger = new Messager();
+        msger.start();
         client.indexingDirectory(directory);
         client.processEvents();
     }
 
+    protected static class Messager extends Thread {
+
+        @Override
+        public void run() {
+            System.out.println("Messager!!!!");
+            Instruction inst;
+            try {
+                while ((inst = SyncClient.takeInst()) != null) {
+                    String msg = inst.ToJSON();
+                    System.err.println("Sending: " + msg);
+                    try {
+                        out.writeUTF(msg);
+                        String feedback = in.readUTF();
+                        System.out.println("Received: " + feedback);
+                        if (feedback.equals("BlockUnavailableException")) {
+                            Instruction upgraded = new NewBlockInstruction(
+                                    (CopyBlockInstruction) inst);
+                            String msg2 = upgraded.ToJSON();
+                            System.err.println("Sending: " + msg2);
+
+                            out.writeUTF(msg2);
+                            feedback = in.readUTF();
+                            System.out.println("Received: " + feedback);
+                        }
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+
+                    try {
+                        Thread.sleep(1000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
     protected class FileSync extends Thread {
         SynchronisedFile fromFile;
+        Queue<Instruction> fileInstQueue = new LinkedList<>();
 
         FileSync(SynchronisedFile ff) {
             fromFile = ff;
@@ -207,32 +270,15 @@ public class SyncClient {
         @Override
         public void run() {
             Instruction inst;
-            while((inst = fromFile.NextInstruction()) != null) {
-                String msg = inst.ToJSON();
-                System.err.println("Sending: " + msg);
-                try {
-                    out.writeUTF(msg);
-
-                    String feedback = in.readUTF();
-                    System.out.println("Received: " + feedback);
-                     if (feedback.equals("BlockUnavailableException")) {
-                        Instruction upgraded = new NewBlockInstruction(
-                                (CopyBlockInstruction) inst);
-                        String msg2 = upgraded.ToJSON();
-                        System.err.println("Sending: " + msg2);
-
-                        out.writeUTF(msg2);
-                        feedback = in.readUTF();
-                        System.out.println("Received: " + feedback);
+            while ((inst = fromFile.NextInstruction()) != null) {
+                fileInstQueue.offer(inst);
+                if (inst.Type().equals("EndUpdate")) {
+                    try {
+                        SyncClient.putInst(fileInstQueue);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
                     }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-
-                try {
-                    Thread.sleep(1000);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
+                    fileInstQueue.clear();
                 }
             }
         }

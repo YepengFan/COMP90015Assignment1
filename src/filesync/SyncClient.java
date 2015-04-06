@@ -11,6 +11,7 @@ import java.nio.file.attribute.*;
 import java.util.*;
 
 import org.json.simple.JSONObject;
+
 import static java.nio.file.StandardWatchEventKinds.*;
 import static java.nio.file.LinkOption.*;
 
@@ -23,6 +24,11 @@ public class SyncClient {
     private static int serverPort = 4444; // default port is 4444
     private static DataInputStream in = null;
     private static DataOutputStream out = null;
+
+    private static Object lock = new Object();
+    private boolean processing = false;
+
+    private static Map<String, FileSync> threadMapper = new HashMap<>();
 
     private final WatchService watcher;
     private final Map<WatchKey, Path> keys;
@@ -112,18 +118,14 @@ public class SyncClient {
                 System.out.format("%s: %s\n", event.kind().name(), child);
 
                 // start a thread to service the Instruction queue.
+
                 try {
-                    SynchronisedFile fromFile = new SynchronisedFile
-                            (String.valueOf(child));
-                    fromFile.CheckFileState();
-                    FileSync fileSync = new FileSync(fromFile);
-                    fileSync.start();
+                    threadMapper.get(String.valueOf(child.getFileName())).fromFile
+                            .CheckFileState();
                 } catch (IOException e) {
                     e.printStackTrace();
-                    System.exit(-1);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
-                    System.exit(-1);
                 }
 
                 // if directory is created, and watching recursively, then
@@ -155,6 +157,8 @@ public class SyncClient {
     private void indexingDirectory(String directory) {
         JSONObject index = new JSONObject();
         String[] dir = new File(directory).list();
+        File folder = new File(directory);
+        File[] files = folder.listFiles();
         LinkedList<String> list = new LinkedList<>(Arrays.asList(dir));
         index.put("Type", "Index");
         index.put("Index", list);
@@ -166,6 +170,18 @@ public class SyncClient {
             System.out.println("Received: " + data);
         } catch (IOException e) {
             e.printStackTrace();
+        }
+
+        for (File file : files) {
+            try {
+                FileSync fileSync = new FileSync(new SynchronisedFile(file
+                        .getAbsolutePath()), lock);
+                fileSync.start();
+                threadMapper.put(file.getName(), fileSync);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
         }
     }
 
@@ -186,16 +202,17 @@ public class SyncClient {
 
     protected class FileSync extends Thread {
         SynchronisedFile fromFile;
+        Object lock;
 
-
-        FileSync(SynchronisedFile ff) {
+        FileSync(SynchronisedFile ff, Object lock) {
             fromFile = ff;
+            this.lock = lock;
         }
 
-        private synchronized void process() {
-
-            Instruction inst = fromFile.NextInstruction();
-            while (inst != null) {
+        @Override
+        public void run() {
+            Instruction inst;
+            while((inst = fromFile.NextInstruction()) != null) {
                 String msg = inst.ToJSON();
                 System.err.println("Sending: " + msg);
                 try {
@@ -203,9 +220,7 @@ public class SyncClient {
 
                     String feedback = in.readUTF();
                     System.out.println("Received: " + feedback);
-                    if (feedback.equals("Success")) {
-                        inst = fromFile.NextInstruction();
-                    } else if (feedback.equals("BlockUnavailableException")) {
+                     if (feedback.equals("BlockUnavailableException")) {
                         Instruction upgraded = new NewBlockInstruction(
                                 (CopyBlockInstruction) inst);
                         String msg2 = upgraded.ToJSON();
@@ -214,9 +229,6 @@ public class SyncClient {
                         out.writeUTF(msg2);
                         feedback = in.readUTF();
                         System.out.println("Received: " + feedback);
-                        if (feedback.equals("Success")) {
-                            inst = fromFile.NextInstruction();
-                        }
                     }
                 } catch (IOException e) {
                     e.printStackTrace();
@@ -228,11 +240,6 @@ public class SyncClient {
                     e.printStackTrace();
                 }
             }
-        }
-
-        @Override
-        public void run() {
-            process();
         }
     }
 }

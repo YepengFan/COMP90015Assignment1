@@ -223,7 +223,6 @@ public class SyncClient {
 
         @Override
         public void run() {
-            System.out.println("Messager!!!!");
             Instruction inst;
             try {
                 while ((inst = SyncClient.takeInst()) != null) {
@@ -233,7 +232,9 @@ public class SyncClient {
                         out.writeUTF(msg);
                         String feedback = in.readUTF();
                         System.out.println("Received: " + feedback);
-                        if (feedback.equals("BlockUnavailableException")) {
+                        if (feedback.equals("Success")) {
+                            continue;
+                        } else if (feedback.equals("BlockUnavailableException")) {
                             Instruction upgraded = new NewBlockInstruction(
                                     (CopyBlockInstruction) inst);
                             String msg2 = upgraded.ToJSON();
@@ -242,6 +243,9 @@ public class SyncClient {
                             out.writeUTF(msg2);
                             feedback = in.readUTF();
                             System.out.println("Received: " + feedback);
+                            if(feedback.equals("Success")) {
+                                continue;
+                            }
                         }
                     } catch (IOException e) {
                         e.printStackTrace();

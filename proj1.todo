@@ -6,14 +6,15 @@ Programming Part:
     ✔ Indexing folder files @done (15-04-07 08:24)
     ✔ Single file sync @done (15-04-07 08:24)
     ☐ Daemon Thread
+    ☐ Client side EOF exception handle
     ☐ Client-side terminate threads
     ☐ Server-side terminate threads
     ✔ Socket - TCP protocol @done (15-04-02 09:18)
-    ☐ File creation
+    ✔ File creation @done (15-04-10 17:26)
     ☐ File deletion
       ☐ Terminate corresponding thread
-    ☐ Initialise folder on server-side
-      ☐ create thread for each file waiting for instructions
+    ✔ Initialise folder on server-side @done (15-04-10 17:26)
+      ✔ create thread for each file waiting for instructions @done (15-04-10 17:26)
       ☐ destroy thread when file deleted
   Develop a basic c/s system:
     ✔ TCP Synchronous Request-Reply Protocol @done (15-04-07 08:24)

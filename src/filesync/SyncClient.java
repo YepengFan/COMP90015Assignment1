@@ -11,9 +11,7 @@ import java.nio.file.attribute.*;
 import java.util.*;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
-
 import org.json.simple.JSONObject;
-
 import static java.nio.file.StandardWatchEventKinds.*;
 import static java.nio.file.LinkOption.*;
 
@@ -198,7 +196,6 @@ public class SyncClient {
             } catch (IOException e) {
                 e.printStackTrace();
             }
-
         }
     }
 
@@ -213,14 +210,13 @@ public class SyncClient {
         boolean recursive = false;
         Path dir = Paths.get(directory);
         SyncClient client = new SyncClient(dir, recursive);
-        Messager msger = new Messager();
+        Messenger msger = new Messenger();
         msger.start();
         client.indexingDirectory(directory);
         client.processEvents();
     }
 
-    protected static class Messager extends Thread {
-
+    protected static class Messenger extends Thread {
         @Override
         public void run() {
             Instruction inst;
@@ -243,7 +239,7 @@ public class SyncClient {
                             out.writeUTF(msg2);
                             feedback = in.readUTF();
                             System.out.println("Received: " + feedback);
-                            if(feedback.equals("Success")) {
+                            if (feedback.equals("Success")) {
                                 continue;
                             }
                         }

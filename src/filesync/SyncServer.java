@@ -7,7 +7,6 @@ package filesync;
 import java.net.*;
 import java.io.*;
 import java.util.*;
-
 import org.json.simple.JSONArray;
 import org.json.simple.parser.ContainerFactory;
 import org.json.simple.parser.JSONParser;
@@ -113,7 +112,6 @@ public class SyncServer {
 
         private String[] parseDir(String jsonIndex) {
             String[] file_list = jsonIndex.split(",");
-
             return file_list;
         }
 
@@ -183,12 +181,10 @@ public class SyncServer {
                                     System.err.println(json.toString());
                                     out.writeUTF("Success");
                                 } catch (BlockUnavailableException e1) {
-                                    assert(false);
+                                    assert (false);
                                 }
                             }
                         }
-
-
                     }
                 }
             } catch (EOFException e) {
@@ -203,6 +199,5 @@ public class SyncServer {
                 }
             }
         }
-
     }
 }

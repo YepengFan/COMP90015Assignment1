@@ -45,6 +45,9 @@ public class SyncClient {
             Path dir = Paths.get(directory);
             SyncClient client = new SyncClient(dir, recursive);
             Messenger msger = new Messenger();
+
+            // set msger as daemon thread
+            msger.setDaemon(true);
             msger.start();
             client.indexingDirectory(directory);
             client.processEvents();
@@ -209,6 +212,9 @@ public class SyncClient {
             try {
                 FileSync fileSync = new FileSync(new SynchronisedFile(file
                         .getAbsolutePath()));
+
+                // set fileSync as daemon thread
+                fileSync.setDaemon(true);
                 fileSync.start();
                 threadMapper.put(file.getName(), fileSync);
             } catch (IOException e) {

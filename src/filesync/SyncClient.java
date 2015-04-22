@@ -20,7 +20,6 @@ import static java.nio.file.LinkOption.*;
  */
 
 public class SyncClient {
-    private static Socket socket = null;
     private static int serverPort = 4444; // default port is 4444
     private static DataInputStream in = null;
     private static DataOutputStream out = null;
@@ -34,41 +33,28 @@ public class SyncClient {
     private final boolean recursive;
     private boolean trace = false;
 
-    private static void putInst(Queue<Instruction>
-                                        fileInstQueue) throws
-            InterruptedException {
-        Iterator iterator = fileInstQueue.iterator();
-        Instruction instruction;
-        while (iterator.hasNext()) {
-            instruction = (Instruction) iterator.next();
-            instQueue.put(instruction);
-            System.out.println(instruction.ToJSON());
-        }
-    }
+    public static void main(String[] args) throws IOException {
+        String hostname = args[1];
+        String directory = args[0];
 
-    private static Instruction takeInst() throws InterruptedException {
-        return instQueue.take();
+        try(Socket socket = new Socket(hostname, serverPort)){
+            System.out.println("Connection Established");
+            in = new DataInputStream(socket.getInputStream());
+            out = new DataOutputStream(socket.getOutputStream());
+            boolean recursive = false;
+            Path dir = Paths.get(directory);
+            SyncClient client = new SyncClient(dir, recursive);
+            Messenger msger = new Messenger();
+            msger.start();
+            client.indexingDirectory(directory);
+            client.processEvents();
+
+        }
     }
 
     @SuppressWarnings("unchecked")
     static <T> WatchEvent<T> cast(WatchEvent<?> event) {
         return (WatchEvent<T>) event;
-    }
-
-    public SyncClient(Path dir, boolean recursive) throws IOException {
-        this.watcher = FileSystems.getDefault().newWatchService();
-        this.keys = new HashMap<WatchKey, Path>();
-        this.recursive = recursive;
-
-        if (recursive) {
-            System.out.format("Scanning %s ...\n", dir);
-            registerAll(dir);
-            System.out.println("Done.");
-        } else {
-            register(dir);
-        }
-        // enable trace after initial registration
-        this.trace = true;
     }
 
     private void register(Path dir) throws IOException {
@@ -101,6 +87,41 @@ public class SyncClient {
         });
     }
 
+    public SyncClient(Path dir, boolean recursive) throws IOException {
+        this.watcher = FileSystems.getDefault().newWatchService();
+        this.keys = new HashMap<WatchKey, Path>();
+        this.recursive = recursive;
+
+        if (recursive) {
+            System.out.format("Scanning %s ...\n", dir);
+            registerAll(dir);
+            System.out.println("Done.");
+        } else {
+            register(dir);
+        }
+        // enable trace after initial registration
+        this.trace = true;
+    }
+
+    // put instruction to the instQueue
+    private static void putInst(Queue<Instruction>
+                                        fileInstQueue) throws
+            InterruptedException {
+        Iterator iterator = fileInstQueue.iterator();
+        Instruction instruction;
+        while (iterator.hasNext()) {
+            instruction = (Instruction) iterator.next();
+            instQueue.put(instruction);
+            System.out.println(instruction.ToJSON());
+        }
+    }
+
+    // take instruction from the instQueue
+    private static Instruction takeInst() throws InterruptedException {
+        return instQueue.take();
+    }
+
+    // main thread which invoke check file state when file changed
     private void processEvents() {
         for (; ; ) {
             // wait for key to be signalled
@@ -133,7 +154,6 @@ public class SyncClient {
                 System.out.format("%s: %s\n", event.kind().name(), child);
 
                 // start a thread to service the Instruction queue.
-
                 try {
                     threadMapper.get(String.valueOf(child.getFileName())).fromFile
                             .CheckFileState();
@@ -151,7 +171,6 @@ public class SyncClient {
                             registerAll(child);
                         }
                     } catch (IOException e) {
-
                     }
                 }
             }
@@ -160,7 +179,6 @@ public class SyncClient {
             boolean valid = key.reset();
             if (!valid) {
                 keys.remove(key);
-
                 // all directories are inaccessible
                 if (keys.isEmpty()) {
                     break;
@@ -197,23 +215,6 @@ public class SyncClient {
                 e.printStackTrace();
             }
         }
-    }
-
-    public static void main(String[] args) throws IOException {
-        String hostname = args[1];
-        String directory = args[0];
-
-        socket = new Socket(hostname, serverPort);
-        System.out.println("Connection Established");
-        in = new DataInputStream(socket.getInputStream());
-        out = new DataOutputStream(socket.getOutputStream());
-        boolean recursive = false;
-        Path dir = Paths.get(directory);
-        SyncClient client = new SyncClient(dir, recursive);
-        Messenger msger = new Messenger();
-        msger.start();
-        client.indexingDirectory(directory);
-        client.processEvents();
     }
 
     protected static class Messenger extends Thread {

@@ -25,7 +25,7 @@ public class SyncClient {
     private static DataOutputStream out = null;
 
     private static Map<String, FileSync> threadMapper = new HashMap<>();
-    private static BlockingQueue<Instruction> instQueue = new
+    private static BlockingQueue<Object> instQueue = new
             ArrayBlockingQueue<>(1024);
 
     private final WatchService watcher;
@@ -120,7 +120,7 @@ public class SyncClient {
     }
 
     // take instruction from the instQueue
-    private static Instruction takeInst() throws InterruptedException {
+    private static Object takeInst() throws InterruptedException {
         return instQueue.take();
     }
 
@@ -226,9 +226,14 @@ public class SyncClient {
     protected static class Messenger extends Thread {
         @Override
         public void run() {
-            Instruction inst;
+//            Instruction inst;
+            Object obj;
             try {
-                while ((inst = SyncClient.takeInst()) != null) {
+                while ((obj = SyncClient.takeInst()) != null) {
+                    System.out.println("OBJ: " + obj.getClass());
+
+                    Instruction inst = (Instruction) obj;
+
                     String msg = inst.ToJSON();
                     System.err.println("Sending: " + msg);
                     try {

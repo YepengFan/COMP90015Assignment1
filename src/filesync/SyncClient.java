@@ -11,7 +11,9 @@ import java.nio.file.attribute.*;
 import java.util.*;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+
 import org.json.simple.JSONObject;
+
 import static java.nio.file.StandardWatchEventKinds.*;
 import static java.nio.file.LinkOption.*;
 
@@ -25,7 +27,7 @@ public class SyncClient {
     private static DataOutputStream out = null;
 
     private static Map<String, FileSync> threadMapper = new HashMap<>();
-    private static BlockingQueue<Object> instQueue = new
+    private static BlockingQueue<Object> msgQueue = new
             ArrayBlockingQueue<>(1024);
 
     private final WatchService watcher;
@@ -37,7 +39,7 @@ public class SyncClient {
         String hostname = args[1];
         String directory = args[0];
 
-        try(Socket socket = new Socket(hostname, serverPort)){
+        try (Socket socket = new Socket(hostname, serverPort)) {
             System.out.println("Connection Established");
             in = new DataInputStream(socket.getInputStream());
             out = new DataOutputStream(socket.getOutputStream());
@@ -51,7 +53,6 @@ public class SyncClient {
             msger.start();
             client.indexingDirectory(directory);
             client.processEvents();
-
         }
     }
 
@@ -107,21 +108,27 @@ public class SyncClient {
     }
 
     // put instruction to the instQueue
-    private static void putInst(Queue<Instruction>
-                                        fileInstQueue) throws
+    private static void putMsg(Queue<Object>
+                                       fileInstQueue) throws
             InterruptedException {
         Iterator iterator = fileInstQueue.iterator();
-        Instruction instruction;
-        while (iterator.hasNext()) {
-            instruction = (Instruction) iterator.next();
-            instQueue.put(instruction);
-            System.out.println(instruction.ToJSON());
+
+        if (fileInstQueue.size() == 1) {
+            JSONObject json = (JSONObject) fileInstQueue.poll();
+            msgQueue.put(json);
+        } else {
+            Instruction instruction;
+            while (iterator.hasNext()) {
+                instruction = (Instruction) iterator.next();
+                msgQueue.put(instruction);
+//                System.out.println(instruction.ToJSON());
+            }
         }
     }
 
     // take instruction from the instQueue
-    private static Object takeInst() throws InterruptedException {
-        return instQueue.take();
+    private static Object takeMsg() throws InterruptedException {
+        return msgQueue.take();
     }
 
     // main thread which invoke check file state when file changed
@@ -158,8 +165,32 @@ public class SyncClient {
 
                 // start a thread to service the Instruction queue.
                 try {
-                    threadMapper.get(String.valueOf(child.getFileName())).fromFile
-                            .CheckFileState();
+                    if (event.kind().name().equals("ENTRY_CREATE")) {
+//                        System.out.println("new file created " + child
+//                                .getFileName());
+                        Queue<Object> msgQ = new LinkedList<>();
+                        JSONObject json = new JSONObject();
+
+                        json.put("Type", "CreateFile");
+                        json.put("FileName", child.getFileName().toString());
+                        msgQ.offer(json);
+                        SyncClient.putMsg(msgQ);
+                        msgQ.clear();
+
+                        File file = child.toFile();
+                        FileSync fileSync = new FileSync(new SynchronisedFile
+                                (file.getAbsolutePath()));
+                        threadMapper.put(file.getName(), fileSync);
+                        fileSync.setDaemon(true);
+                        fileSync.start();
+                    } else if (event.kind().name().equals("ENTRY_DELETE")) {
+                        System.out.println("file delted " + child.getFileName());
+
+
+                    } else {
+                        threadMapper.get(String.valueOf(child.getFileName())).fromFile
+                                .CheckFileState();
+                    }
                 } catch (IOException e) {
                     e.printStackTrace();
                 } catch (InterruptedException e) {
@@ -214,9 +245,9 @@ public class SyncClient {
                         .getAbsolutePath()));
 
                 // set fileSync as daemon thread
+                threadMapper.put(file.getName(), fileSync);
                 fileSync.setDaemon(true);
                 fileSync.start();
-                threadMapper.put(file.getName(), fileSync);
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -229,40 +260,50 @@ public class SyncClient {
 //            Instruction inst;
             Object obj;
             try {
-                while ((obj = SyncClient.takeInst()) != null) {
-                    System.out.println("OBJ: " + obj.getClass());
-
-                    Instruction inst = (Instruction) obj;
-
-                    String msg = inst.ToJSON();
-                    System.err.println("Sending: " + msg);
-                    try {
-                        out.writeUTF(msg);
-                        String feedback = in.readUTF();
-                        System.out.println("Received: " + feedback);
-                        if (feedback.equals("Success")) {
-                            continue;
-                        } else if (feedback.equals("BlockUnavailableException")) {
-                            Instruction upgraded = new NewBlockInstruction(
-                                    (CopyBlockInstruction) inst);
-                            String msg2 = upgraded.ToJSON();
-                            System.err.println("Sending: " + msg2);
-
-                            out.writeUTF(msg2);
-                            feedback = in.readUTF();
+                while ((obj = SyncClient.takeMsg()) != null) {
+                    if (obj instanceof JSONObject) {
+                        String msg = ((JSONObject) obj).toJSONString();
+                        System.err.println("Sending: " + ((JSONObject) obj)
+                                .toJSONString
+                                        ());
+                        try {
+                            out.writeUTF(msg);
+                            String feedback = in.readUTF();
+                            System.out.println("Received: " + feedback);
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    } else {
+                        Instruction inst = (Instruction) obj;
+                        String msg = inst.ToJSON();
+                        System.err.println("Sending: " + msg);
+                        try {
+                            out.writeUTF(msg);
+                            String feedback = in.readUTF();
                             System.out.println("Received: " + feedback);
                             if (feedback.equals("Success")) {
                                 continue;
-                            }
-                        }
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
+                            } else if (feedback.equals("BlockUnavailableException")) {
+                                Instruction upgraded = new NewBlockInstruction(
+                                        (CopyBlockInstruction) inst);
+                                String msg2 = upgraded.ToJSON();
+                                System.err.println("Sending: " + msg2);
 
-                    try {
-                        Thread.sleep(1000);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
+                                out.writeUTF(msg2);
+                                feedback = in.readUTF();
+                                System.out.println("Received: " + feedback);
+                                if (feedback.equals("Success")) {
+                                    continue;
+                                }
+                            }
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                        try {
+                            Thread.sleep(1000);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
                     }
                 }
             } catch (InterruptedException e) {
@@ -273,7 +314,7 @@ public class SyncClient {
 
     protected class FileSync extends Thread {
         SynchronisedFile fromFile;
-        Queue<Instruction> fileInstQueue = new LinkedList<>();
+        Queue<Object> fileInstQueue = new LinkedList<>();
 
         FileSync(SynchronisedFile ff) {
             fromFile = ff;
@@ -286,7 +327,7 @@ public class SyncClient {
                 fileInstQueue.offer(inst);
                 if (inst.Type().equals("EndUpdate")) {
                     try {
-                        SyncClient.putInst(fileInstQueue);
+                        SyncClient.putMsg(fileInstQueue);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }

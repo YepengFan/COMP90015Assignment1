@@ -163,6 +163,7 @@ public class SyncServer {
                             SynchronisedFile tf = new SynchronisedFile(file
                                     .getAbsolutePath().toString());
                             instanceMapper.put(file.getName(), tf);
+                            out.writeUTF("Success");
                         } else if (json.get("Type").equals("StartUpdate")) {
                             fileName = json.get("FileName").toString();
                             Instruction receivedInst = instFact.FromJSON(json

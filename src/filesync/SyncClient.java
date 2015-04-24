@@ -121,7 +121,6 @@ public class SyncClient {
             while (iterator.hasNext()) {
                 instruction = (Instruction) iterator.next();
                 msgQueue.put(instruction);
-//                System.out.println(instruction.ToJSON());
             }
         }
     }
@@ -165,6 +164,7 @@ public class SyncClient {
 
                 // start a thread to service the Instruction queue.
                 try {
+                    // todo: check
                     if (event.kind().name().equals("ENTRY_CREATE")) {
 //                        System.out.println("new file created " + child
 //                                .getFileName());
@@ -184,7 +184,7 @@ public class SyncClient {
                         fileSync.setDaemon(true);
                         fileSync.start();
                     } else if (event.kind().name().equals("ENTRY_DELETE")) {
-                        System.out.println("file delted " + child.getFileName());
+                        System.out.println("file deleted " + child.getFileName());
 
 
                     } else {

@@ -6,14 +6,14 @@ Programming Part:
     ✔ Indexing folder files @done (15-04-07 08:24)
     ✔ Single file sync @done (15-04-07 08:24)
     ✔ Daemon Thread @done (15-04-22 23:30)
-    ☐ Client-side terminate threads
+    ✔ Client-side terminate threads @done (15-04-24 23:43)
     ✔ Socket - TCP protocol @done (15-04-02 09:18)
     ✔ File creation @done (15-04-10 17:26)
-    ☐ File deletion
-      ☐ Terminate corresponding thread
+    ✔ File deletion @done (15-04-24 23:43)
+      ✔ Terminate corresponding thread @done (15-04-24 23:43)
     ✔ Initialise folder on server-side @done (15-04-10 17:26)
       ✔ create thread for each file waiting for instructions @done (15-04-10 17:26)
-      ☐ destroy thread when file deleted
+      ✔ destroy thread when file deleted @done (15-04-24 23:43)
   Develop a basic c/s system:
     ✔ TCP Synchronous Request-Reply Protocol @done (15-04-07 08:24)
        ✔ Instructions @done (15-04-07 08:24)
@@ -21,7 +21,7 @@ Programming Part:
     ✔ Folder Synchronsation @done (15-04-24 15:39)
       ✔ New file synchronisation @done (15-04-24 15:39)
          ✔ check file name / state @done (15-04-24 15:39)
-      ☐ File deletion synchronisation and will terminate corresponding thread
+      ✔ File deletion synchronisation and will terminate corresponding thread @done (15-04-24 23:43)
     ✔ Handle "BlockUnavailableException" at the server @done (15-04-07 08:25)
     ✔ Daemon Thread except main thread @done (15-04-24 15:39)
     Extra:
@@ -34,9 +34,9 @@ Programming Part:
       ✔ http://www.cnblogs.com/diyingyun/archive/2011/12/25/2300998.html @done (15-04-22 23:30)
       ✔ http://blog.csdn.net/liangliyin/article/details/6076552 @done (15-04-22 23:30)
     ☐ 2 jar file. One for server, one for client
-    ☐ Jar command line arguments
+    ✔ Jar command line arguments @done (15-04-24 23:43)
       ✔ default server port: 4444 @done (15-04-24 15:39)
-      ☐ command line parsing: args4j library
+      ✔ command line parsing: args4j library @done (15-04-24 23:43)
       ☐ [C-c] should terminate either client or server
 
    Report Part:

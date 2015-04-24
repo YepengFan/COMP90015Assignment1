@@ -46,7 +46,6 @@ public class SyncServer {
     }
 
     public static void main(String[] args) throws IOException {
-        toDirectory = args[0];
         SyncServer syncServer = new SyncServer(args);
         syncServer.registerDir();
 

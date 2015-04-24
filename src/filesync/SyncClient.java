@@ -192,7 +192,7 @@ public class SyncClient {
                         msgQ.clear();
 
                         String fileName = child.getFileName().toString();
-                        threadMapper.get(fileName).setStop();
+                        threadMapper.get(fileName).interrupt();
                         threadMapper.remove(fileName);
                     } else {
                         threadMapper.get(String.valueOf(child.getFileName())).fromFile
@@ -326,15 +326,10 @@ public class SyncClient {
 
     protected class FileSync extends Thread {
         SynchronisedFile fromFile;
-        private volatile boolean finished = false;
         Queue<Object> fileInstQueue = new LinkedList<>();
 
         FileSync(SynchronisedFile ff) {
             fromFile = ff;
-        }
-
-        public void setStop(){
-            finished = true;
         }
 
         @Override
@@ -349,14 +344,8 @@ public class SyncClient {
                         e.printStackTrace();
                     }
                     fileInstQueue.clear();
-
-                    if (finished == true){
-                        break;
-                    }
                 }
             }
-
-            System.out.println("Thread " + this.fromFile.getFilename() + " finished.");
         }
     }
 }

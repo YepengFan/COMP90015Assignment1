@@ -244,6 +244,11 @@ public class SyncClient {
                 FileSync fileSync = new FileSync(new SynchronisedFile(file
                         .getAbsolutePath()));
 
+                try {
+                    fileSync.fromFile.CheckFileState();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
                 // set fileSync as daemon thread
                 threadMapper.put(file.getName(), fileSync);
                 fileSync.setDaemon(true);

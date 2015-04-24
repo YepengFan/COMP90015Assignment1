@@ -308,7 +308,6 @@ public class SynchronisedFile {
 		} catch (InterruptedException e) {
 			// print an alert
 //			e.printStackTrace();
-			System.out.println(getFilename() + " is terminated.");
 		}
 		return i;
 	}

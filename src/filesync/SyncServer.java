@@ -12,27 +12,42 @@ import org.json.simple.JSONArray;
 import org.json.simple.parser.ContainerFactory;
 import org.json.simple.parser.JSONParser;
 
+import org.kohsuke.args4j.Argument;
+import org.kohsuke.args4j.CmdLineException;
+import org.kohsuke.args4j.CmdLineParser;
+import org.kohsuke.args4j.ExampleMode;
+import org.kohsuke.args4j.Option;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Implement TCP Protocol - Server Side
  */
 
 public class SyncServer {
     private static ServerSocket listenSocket = null;
-    private static int serverPort = 4444; // default port is 4444
-    private static String toDirectory = null;
     private static Map<String, SynchronisedFile> instanceMapper = new
             HashMap<>();
-    // Single Client Version
     private static int NUMBER = 0;
 
+    @Option(name = "-f", usage = "synchronise this folder", required = true)
+    private static String toDirectory;
+
+    @Option(name = "-p", usage = "port number")
+    private static int serverPort = 4444;
+
+    @Argument
+    private List<String> arguments = new ArrayList<>();
 
     private void processConnections(Socket clientSocket) {
         new Connection(clientSocket);
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
         toDirectory = args[0];
-        SyncServer syncServer = new SyncServer();
+        SyncServer syncServer = new SyncServer(args);
         syncServer.registerDir();
 
         try {
@@ -48,6 +63,26 @@ public class SyncServer {
         } catch (IOException e) {
             System.out.println("Listen socket: " + e.getMessage());
         }
+    }
+
+    public void doMain(String[] args) throws IOException {
+        CmdLineParser parser = new CmdLineParser(this);
+
+        try {
+            parser.parseArgument(args);
+        } catch (CmdLineException e) {
+            System.err.println(e.getMessage());
+            System.err.println("java SampleMain [options] arguments...");
+            parser.printUsage(System.err);
+            System.err.println();
+
+            System.err.println("Example: java SampleMain" + parser.printExample(ExampleMode.ALL));
+            System.exit(0);
+        }
+    }
+
+    public SyncServer(String[] args) throws IOException {
+        doMain(args);
     }
 
     private void registerDir() {
@@ -151,8 +186,6 @@ public class SyncServer {
                             System.err.println(json.toString());
                             out.writeUTF("Success");
                         } else if (json.get("Type").equals("CreateFile")) {
-//                            System.out.println("create a new file: " + json.get
-//                                    ("FileName"));
                             File dir = new File(toDirectory);
                             File file = new File(dir.getAbsoluteFile()
                                     .toString() + File.separator + json.get
@@ -166,12 +199,10 @@ public class SyncServer {
                             instanceMapper.put(file.getName(), tf);
                             out.writeUTF("Success");
                         } else if (json.get("Type").equals("DeleteFile")) {
-                            System.out.println("delete a file: " + json.get("FileName"));
-
                             File dir = new File(toDirectory);
                             File file = new File(dir.getAbsoluteFile().toString() + File.separator + json.get("FileName"));
 
-                            if (file.exists()){
+                            if (file.exists()) {
                                 file.delete();
                             }
 

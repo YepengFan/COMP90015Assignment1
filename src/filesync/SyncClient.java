@@ -13,16 +13,25 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
 import org.json.simple.JSONObject;
-
 import static java.nio.file.StandardWatchEventKinds.*;
 import static java.nio.file.LinkOption.*;
+
+import org.kohsuke.args4j.Argument;
+import org.kohsuke.args4j.CmdLineException;
+import org.kohsuke.args4j.CmdLineParser;
+import org.kohsuke.args4j.ExampleMode;
+import org.kohsuke.args4j.Option;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
 
 /**
  * Implement TCP Protocol - Client Side
  */
 
 public class SyncClient {
-    private static int serverPort = 4444; // default port is 4444
     private static DataInputStream in = null;
     private static DataOutputStream out = null;
 
@@ -32,20 +41,28 @@ public class SyncClient {
 
     private final WatchService watcher;
     private final Map<WatchKey, Path> keys;
-    private final boolean recursive;
+    private final boolean recursive = false;
     private boolean trace = false;
 
+    @Option(name = "-f", usage = "synchronise this folder", required = true)
+    private static String directory;
+
+    @Option(name = "-p", usage = "port number")
+    private static int serverPort = 4444;
+
+    @Option(name = "-h", usage = "hostname", required = true)
+    private static String hostname;
+
+    @Argument
+    private List<String> arguments = new ArrayList<>();
+
     public static void main(String[] args) throws IOException {
-        String hostname = args[1];
-        String directory = args[0];
+        SyncClient client = new SyncClient(args);
 
         try (Socket socket = new Socket(hostname, serverPort)) {
             System.out.println("Connection Established");
             in = new DataInputStream(socket.getInputStream());
             out = new DataOutputStream(socket.getOutputStream());
-            boolean recursive = false;
-            Path dir = Paths.get(directory);
-            SyncClient client = new SyncClient(dir, recursive);
             Messenger msger = new Messenger();
 
             // set msger as daemon thread
@@ -55,6 +72,23 @@ public class SyncClient {
             client.processEvents();
         }
     }
+
+    public void doMain(String[] args) throws IOException {
+        CmdLineParser parser = new CmdLineParser(this);
+
+        try {
+            parser.parseArgument(args);
+        } catch (CmdLineException e) {
+            System.err.println(e.getMessage());
+            System.err.println("java SampleMain [options] arguments...");
+            parser.printUsage(System.err);
+            System.err.println();
+
+            System.err.println("Example: java SampleMain" + parser.printExample(ExampleMode.ALL));
+            System.exit(0);
+        }
+    }
+
 
     @SuppressWarnings("unchecked")
     static <T> WatchEvent<T> cast(WatchEvent<?> event) {
@@ -91,10 +125,13 @@ public class SyncClient {
         });
     }
 
-    public SyncClient(Path dir, boolean recursive) throws IOException {
+    //    public SyncClient(Path dir, boolean recursive) throws IOException {
+    public SyncClient(String[] args) throws IOException {
+        doMain(args);
+
+        Path dir = Paths.get(directory);
         this.watcher = FileSystems.getDefault().newWatchService();
         this.keys = new HashMap<WatchKey, Path>();
-        this.recursive = recursive;
 
         if (recursive) {
             System.out.format("Scanning %s ...\n", dir);
@@ -160,7 +197,7 @@ public class SyncClient {
                 Path child = dir.resolve(name);
 
                 // print out event
-                System.out.format("%s: %s\n", event.kind().name(), child);
+//                System.out.format("%s: %s\n", event.kind().name(), child);
 
                 // start a thread to service the Instruction queue.
                 try {
@@ -181,7 +218,6 @@ public class SyncClient {
                         fileSync.setDaemon(true);
                         fileSync.start();
                     } else if (event.kind().name().equals("ENTRY_DELETE")) {
-                        System.out.println("file deleted " + child.getFileName());
                         Queue<Object> msgQ = new LinkedList<>();
                         JSONObject json = new JSONObject();
 
@@ -241,7 +277,7 @@ public class SyncClient {
             out.writeUTF(index.toJSONString());
             System.err.println("Sending: " + index.toJSONString());
             String data = in.readUTF();
-            System.out.println("Received: " + data);
+//            System.out.println("Received: " + data);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -256,6 +292,7 @@ public class SyncClient {
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
+
                 // set fileSync as daemon thread
                 threadMapper.put(file.getName(), fileSync);
                 fileSync.setDaemon(true);
@@ -281,7 +318,7 @@ public class SyncClient {
                         try {
                             out.writeUTF(msg);
                             String feedback = in.readUTF();
-                            System.out.println("Received: " + feedback);
+//                            System.out.println("Received: " + feedback);
                         } catch (IOException e) {
                             e.printStackTrace();
                         }
@@ -292,7 +329,7 @@ public class SyncClient {
                         try {
                             out.writeUTF(msg);
                             String feedback = in.readUTF();
-                            System.out.println("Received: " + feedback);
+//                            System.out.println("Received: " + feedback);
                             if (feedback.equals("Success")) {
                                 continue;
                             } else if (feedback.equals("BlockUnavailableException")) {
@@ -303,7 +340,7 @@ public class SyncClient {
 
                                 out.writeUTF(msg2);
                                 feedback = in.readUTF();
-                                System.out.println("Received: " + feedback);
+//                                System.out.println("Received: " + feedback);
                                 if (feedback.equals("Success")) {
                                     continue;
                                 }

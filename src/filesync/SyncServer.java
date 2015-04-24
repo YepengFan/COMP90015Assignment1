@@ -7,6 +7,7 @@ package filesync;
 import java.net.*;
 import java.io.*;
 import java.util.*;
+
 import org.json.simple.JSONArray;
 import org.json.simple.parser.ContainerFactory;
 import org.json.simple.parser.JSONParser;
@@ -157,12 +158,24 @@ public class SyncServer {
                                     .toString() + File.separator + json.get
                                     ("FileName"));
 
-                            if (!file.exists()){
+                            if (!file.exists()) {
                                 file.createNewFile();
                             }
                             SynchronisedFile tf = new SynchronisedFile(file
                                     .getAbsolutePath().toString());
                             instanceMapper.put(file.getName(), tf);
+                            out.writeUTF("Success");
+                        } else if (json.get("Type").equals("DeleteFile")) {
+                            System.out.println("delete a file: " + json.get("FileName"));
+
+                            File dir = new File(toDirectory);
+                            File file = new File(dir.getAbsoluteFile().toString() + File.separator + json.get("FileName"));
+
+                            if (file.exists()){
+                                file.delete();
+                            }
+
+                            instanceMapper.remove(file.getName());
                             out.writeUTF("Success");
                         } else if (json.get("Type").equals("StartUpdate")) {
                             fileName = json.get("FileName").toString();

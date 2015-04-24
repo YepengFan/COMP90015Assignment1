@@ -164,10 +164,7 @@ public class SyncClient {
 
                 // start a thread to service the Instruction queue.
                 try {
-                    // todo: check
                     if (event.kind().name().equals("ENTRY_CREATE")) {
-//                        System.out.println("new file created " + child
-//                                .getFileName());
                         Queue<Object> msgQ = new LinkedList<>();
                         JSONObject json = new JSONObject();
 
@@ -185,8 +182,18 @@ public class SyncClient {
                         fileSync.start();
                     } else if (event.kind().name().equals("ENTRY_DELETE")) {
                         System.out.println("file deleted " + child.getFileName());
+                        Queue<Object> msgQ = new LinkedList<>();
+                        JSONObject json = new JSONObject();
 
+                        json.put("Type", "DeleteFile");
+                        json.put("FileName", child.getFileName().toString());
+                        msgQ.offer(json);
+                        SyncClient.putMsg(msgQ);
+                        msgQ.clear();
 
+                        String fileName = child.getFileName().toString();
+                        threadMapper.get(fileName).setStop();
+                        threadMapper.remove(fileName);
                     } else {
                         threadMapper.get(String.valueOf(child.getFileName())).fromFile
                                 .CheckFileState();
@@ -319,10 +326,15 @@ public class SyncClient {
 
     protected class FileSync extends Thread {
         SynchronisedFile fromFile;
+        private volatile boolean finished = false;
         Queue<Object> fileInstQueue = new LinkedList<>();
 
         FileSync(SynchronisedFile ff) {
             fromFile = ff;
+        }
+
+        public void setStop(){
+            finished = true;
         }
 
         @Override
@@ -337,8 +349,14 @@ public class SyncClient {
                         e.printStackTrace();
                     }
                     fileInstQueue.clear();
+
+                    if (finished == true){
+                        break;
+                    }
                 }
             }
+
+            System.out.println("Thread " + this.fromFile.getFilename() + " finished.");
         }
     }
 }
